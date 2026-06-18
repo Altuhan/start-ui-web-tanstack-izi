@@ -8,10 +8,39 @@ import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
+import {
+  resolveDeployBaseUrl,
+  resolveS3PublicUrl,
+} from './src/env/shared';
+
 const { nitroRetrieveServerDirHook, prismaCopyBinariesPlugin } =
   createPrismaCopyBinariesPlugin();
 
+function injectVercelClientEnv() {
+  if (
+    process.env.IZIMAG_FRONTEND_ONLY !== 'true' &&
+    process.env.VERCEL !== '1'
+  ) {
+    return;
+  }
+
+  const baseUrl = resolveDeployBaseUrl(process.env);
+
+  if (!process.env.VITE_BASE_URL && baseUrl) {
+    process.env.VITE_BASE_URL = baseUrl;
+  }
+
+  if (!process.env.VITE_S3_BUCKET_PUBLIC_URL) {
+    process.env.VITE_S3_BUCKET_PUBLIC_URL =
+      resolveS3PublicUrl(process.env.VITE_BASE_URL, process.env) ??
+      process.env.VITE_BASE_URL ??
+      'https://izimag.kz';
+  }
+}
+
 export default defineConfig(({ mode }) => {
+  injectVercelClientEnv();
+
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   return {

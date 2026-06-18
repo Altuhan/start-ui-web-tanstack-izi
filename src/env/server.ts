@@ -2,14 +2,28 @@
 import { createEnv } from '@t3-oss/env-core';
 import { z } from 'zod';
 
+import { isFrontendOnlyDeploy } from '@/env/shared';
+
 const isProd = process.env.NODE_ENV
   ? process.env.NODE_ENV === 'production'
   : import.meta.env?.PROD;
 
+const serverString = (fallback: string) =>
+  isFrontendOnlyDeploy
+    ? z.string().optional().default(fallback)
+    : z.string();
+
+const serverUrl = (fallback: string) =>
+  isFrontendOnlyDeploy
+    ? z.string().url().optional().default(fallback)
+    : z.url();
+
 export const envServer = createEnv({
   server: {
-    DATABASE_URL: z.url(),
-    AUTH_SECRET: z.string(),
+    DATABASE_URL: serverUrl(
+      'postgresql://unused:unused@localhost:5432/izimag_vercel_placeholder'
+    ),
+    AUTH_SECRET: serverString('izimag-vercel-placeholder-auth-secret'),
     AUTH_SESSION_EXPIRATION_IN_SECONDS: z.coerce
       .number()
       .int()
@@ -27,8 +41,8 @@ export const envServer = createEnv({
     GITHUB_CLIENT_ID: zOptionalWithReplaceMe(),
     GITHUB_CLIENT_SECRET: zOptionalWithReplaceMe(),
 
-    EMAIL_SERVER: z.url(),
-    EMAIL_FROM: z.string(),
+    EMAIL_SERVER: serverUrl('smtp://localhost'),
+    EMAIL_FROM: serverString('iziMag <support@izimag.kz>'),
 
     LOGGER_LEVEL: z
       .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
@@ -37,17 +51,18 @@ export const envServer = createEnv({
       .enum(['true', 'false'])
       .prefault(isProd ? 'false' : 'true')
       .transform((value) => value === 'true'),
-    S3_ACCESS_KEY_ID: z.string(),
-    S3_SECRET_ACCESS_KEY: z.string(),
+    S3_ACCESS_KEY_ID: serverString('unused'),
+    S3_SECRET_ACCESS_KEY: serverString('unused'),
     S3_BUCKET_NAME: z.string().default('default'),
     S3_REGION: z.string().default('auto'),
-    S3_HOST: z.string(),
+    S3_HOST: serverString('localhost'),
     S3_SECURE: z.stringbool().default(true),
     S3_FORCE_PATH_STYLE: z.stringbool().default(false),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  skipValidation:
+    !!process.env.SKIP_ENV_VALIDATION || isFrontendOnlyDeploy,
 });
 
 function zOptionalWithReplaceMe() {
@@ -57,7 +72,7 @@ function zOptionalWithReplaceMe() {
     .refine(
       (value) =>
         // Check in prodution if the value is not REPLACE ME
-        !isProd || value !== 'REPLACE ME',
+        !isProd || isFrontendOnlyDeploy || value !== 'REPLACE ME',
       {
         error: 'Update the value "REPLACE ME" or remove the variable',
       }

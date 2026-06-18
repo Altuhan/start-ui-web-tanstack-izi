@@ -5,6 +5,7 @@ import { Logo } from '@/components/brand/logo';
 import { LocalSwitcher } from '@/components/ui/local-switcher';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 
+import { SiteFooter } from '@/features/legal/site-footer';
 import { useMascotState } from '@/features/auth/mascot';
 
 import image from './layout-login-image.jpg';
@@ -35,6 +36,7 @@ export const LayoutLogin = (props: {
           <div className="w-full max-w-xs">{props.children}</div>
         </div>
         {props.footer}
+        <SiteFooter />
       </div>
       <div className="relative hidden w-full flex-1 items-center justify-center bg-muted lg:flex">
         <img
