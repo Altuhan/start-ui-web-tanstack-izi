@@ -61,8 +61,9 @@ export const envServer = createEnv({
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
+  // Frontend-only deploy still needs Zod defaults (S3, DATABASE_URL placeholders).
   skipValidation:
-    !!process.env.SKIP_ENV_VALIDATION || isFrontendOnlyDeploy,
+    !!process.env.SKIP_ENV_VALIDATION && !isFrontendOnlyDeploy,
 });
 
 function zOptionalWithReplaceMe() {

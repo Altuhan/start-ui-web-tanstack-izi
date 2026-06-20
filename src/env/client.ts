@@ -58,5 +58,5 @@ export const envClient = createEnv({
   },
   emptyStringAsUndefined: true,
   skipValidation:
-    !!envMetaOrProcess.SKIP_ENV_VALIDATION || isFrontendOnlyDeploy,
+    !!envMetaOrProcess.SKIP_ENV_VALIDATION && !isFrontendOnlyDeploy,
 });

@@ -4,6 +4,9 @@
 export const isFrontendOnlyDeploy =
   process.env.IZIMAG_FRONTEND_ONLY === 'true';
 
+/** Better Upload / S3 API routes are starter-kit demo; not used on Vercel iziMag UI. */
+export const isUploadServerEnabled = !isFrontendOnlyDeploy;
+
 export function resolveDeployBaseUrl(
   env: Record<string, string | undefined> = process.env
 ): string | undefined {

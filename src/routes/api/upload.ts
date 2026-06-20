@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envClient } from '@/env/client';
 import { envServer } from '@/env/server';
+import { isUploadServerEnabled } from '@/env/shared';
 import { uploadClient } from '@/server/s3';
 import { bookCover } from '@/server/upload/book-cover';
 
@@ -22,8 +23,8 @@ export const Route = createFileRoute('/api/upload')({
   server: {
     handlers: {
       POST: ({ request }) => {
-        if (envClient.VITE_IS_DEMO) {
-          return new Response('Demo Mode', { status: 405 });
+        if (envClient.VITE_IS_DEMO || !isUploadServerEnabled) {
+          return new Response('Upload unavailable', { status: 503 });
         }
         return handleRequest(request, router);
       },
