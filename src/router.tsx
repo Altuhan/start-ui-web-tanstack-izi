@@ -1,19 +1,22 @@
-import { createRouter } from '@tanstack/react-router';
-
-import { queryClient } from '@/lib/tanstack-query/query-client';
-
-import { routeTree } from './routeTree.gen';
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
+import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
+import { NotFound } from './components/NotFound'
 
 export function getRouter() {
-  return createRouter({
-    context: {
-      queryClient,
-    },
-    defaultPreload: 'intent',
-    // Since we're using React Query, we don't want loader calls to ever be stale
-    // This will ensure that the loader is always called when the route is preloaded or visited
-    defaultPreloadStaleTime: 0,
-    scrollRestoration: true,
+  const router = createRouter({
     routeTree,
-  });
+    defaultPreload: 'intent',
+    defaultErrorComponent: DefaultCatchBoundary,
+    defaultNotFoundComponent: () => <NotFound />,
+    scrollRestoration: true,
+  })
+
+  return router
+}
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: ReturnType<typeof getRouter>
+  }
 }

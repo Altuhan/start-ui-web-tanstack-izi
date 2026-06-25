@@ -1,55 +1,41 @@
 /// <reference types="vite/client" />
-import { TanStackDevtools } from '@tanstack/react-devtools';
-import { QueryClient } from '@tanstack/react-query';
-import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import {
-  createRootRouteWithContext,
   HeadContent,
+  Link,
   Outlet,
   Scripts,
-} from '@tanstack/react-router';
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
-import { createServerFn } from '@tanstack/react-start';
-import { type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+  createRootRoute,
+} from '@tanstack/react-router'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { createServerFn } from '@tanstack/react-start'
+import * as React from 'react'
+import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary.js'
+import { NotFound } from '~/components/NotFound.js'
+import appCss from '~/styles/app.css?url'
+import { seo } from '~/utils/seo.js'
+import { useAppSession } from '~/utils/session.js'
 
-import { getPageTitle } from '@/lib/get-page-title';
-import i18n, { syncLanguage } from '@/lib/i18n';
-import { AVAILABLE_LANGUAGES } from '@/lib/i18n/constants';
+const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
+  // We need to auth on the server so we have access to secure cookies
+  const session = await useAppSession()
 
-import { PageError } from '@/components/errors/page-error';
+  if (!session.data.userEmail) {
+    return null
+  }
 
-import { MailDevDevtoolPanel } from '@/devtools/maildev';
-import { EnvHint } from '@/features/devtools/env-hint';
-import { Providers } from '@/providers';
-import { getUserLanguage } from '@/server/utils';
-import appCss from '@/styles/app.css?url';
-
-const initSsrApp = createServerFn({ method: 'GET' }).handler(() => {
   return {
-    language: getUserLanguage(),
-  };
-});
+    email: session.data.userEmail,
+  }
+})
 
-export const Route = createRootRouteWithContext<{
-  queryClient: QueryClient;
-}>()({
-  loader: async () => {
-    // Setup language and theme in SSR to prevent hydratation errors
-    if (import.meta.env.SSR) {
-      const { language } = await initSsrApp();
-      i18n.changeLanguage(language);
+export const Route = createRootRoute({
+  beforeLoad: async () => {
+    const user = await fetchUser()
+
+    return {
+      user,
     }
   },
-  notFoundComponent: () => <PageError type="404" />,
-  errorComponent: () => {
-    return (
-      <RootDocument>
-        <PageError type="error-boundary" />
-      </RootDocument>
-    );
-  },
-  component: RootComponent,
   head: () => ({
     meta: [
       {
@@ -57,100 +43,97 @@ export const Route = createRootRouteWithContext<{
       },
       {
         name: 'viewport',
-        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        content: 'width=device-width, initial-scale=1',
       },
-      {
-        title: getPageTitle(),
-      },
-      {
-        name: 'apple-mobile-web-app-title',
-        content: getPageTitle(),
-      },
-      {
-        name: 'apple-mobile-web-app-status-bar-style',
-        content: 'black-translucent',
-      },
-      {
-        name: 'mobile-web-app-capable',
-        content: 'yes',
-      },
+      ...seo({
+        title: 'iziMag — B2B POS',
+        description:
+          'B2B POS-система iziMag для организаций. Вход, касса и администрирование.',
+      }),
     ],
     links: [
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        href: '/favicon-96x96.png',
-        sizes: '96x96',
-      },
-      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      { rel: 'shortcut icon', href: '/favicon.ico' },
+      { rel: 'stylesheet', href: appCss },
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',
         href: '/apple-touch-icon.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest' },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/favicon-32x32.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '16x16',
+        href: '/favicon-16x16.png',
+      },
+      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
+      { rel: 'icon', href: '/favicon.ico' },
     ],
   }),
-});
+  errorComponent: (props) => {
+    return (
+      <RootDocument>
+        <DefaultCatchBoundary {...props} />
+      </RootDocument>
+    )
+  },
+  notFoundComponent: () => <NotFound />,
+  component: RootComponent,
+})
 
 function RootComponent() {
   return (
     <RootDocument>
-      <Providers>
-        <Outlet />
-        <TanStackDevtools
-          config={{
-            openHotkey: [], // Disable keyboard shortcut
-          }}
-          plugins={[
-            { name: 'Tanstack Query', render: <ReactQueryDevtoolsPanel /> },
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            {
-              name: 'MailDev iframe',
-              render: <MailDevDevtoolPanel />,
-            },
-          ]}
-        />
-      </Providers>
+      <Outlet />
     </RootDocument>
-  );
+  )
 }
 
-function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-  const { i18n } = useTranslation();
-  syncLanguage(i18n.language);
-
-  const languageConfig = AVAILABLE_LANGUAGES.find(
-    ({ key }) => key === i18n.language
-  );
+function RootDocument({ children }: { children: React.ReactNode }) {
+  const { user } = Route.useRouteContext()
 
   return (
-    <html
-      suppressHydrationWarning
-      lang={i18n.language}
-      dir={languageConfig?.dir ?? 'ltr'}
-      style={{
-        fontSize: languageConfig?.fontScale
-          ? `${languageConfig.fontScale * 100}%`
-          : undefined,
-      }}
-    >
+    <html>
       <head>
         <HeadContent />
       </head>
-      <body className="flex min-h-dvh flex-col">
+      <body>
+        <div className="flex gap-4 p-2 text-lg">
+          <Link
+            to="/login"
+            className="font-bold text-cyan-700 dark:text-cyan-400"
+          >
+            iziMag
+          </Link>
+          <Link
+            to="/privacy"
+            activeProps={{ className: 'font-bold' }}
+          >
+            Политика
+          </Link>
+          <Link to="/terms" activeProps={{ className: 'font-bold' }}>
+            Условия
+          </Link>
+          <div className="ml-auto">
+            {user ? (
+              <>
+                <span className="mr-2 text-sm">{user.email}</span>
+                <Link to="/logout">Выйти</Link>
+              </>
+            ) : (
+              <Link to="/login">Вход</Link>
+            )}
+          </div>
+        </div>
+        <hr />
         {children}
-        <EnvHint />
+        <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
     </html>
-  );
+  )
 }

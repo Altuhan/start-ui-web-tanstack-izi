@@ -1,14 +1,18 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { redirect, createFileRoute } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
+import { useAppSession } from '~/utils/session'
 
-import { PageError } from '@/components/errors/page-error';
+const logoutFn = createServerFn().handler(async () => {
+  const session = await useAppSession()
 
-import { PageLogout } from '@/features/auth/page-logout';
+  session.clear()
+
+  throw redirect({
+    href: '/',
+  })
+})
 
 export const Route = createFileRoute('/logout')({
-  component: RouteComponent,
-  errorComponent: () => <PageError type="error-boundary" />,
-});
-
-function RouteComponent() {
-  return <PageLogout />;
-}
+  preload: false,
+  loader: () => logoutFn(),
+})
